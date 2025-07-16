@@ -1,26 +1,79 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+const syllable = require('syllable');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let decorationType = vscode.window.createTextEditorDecorationType({
+    after: {
+        margin: '0 0 0 3em',
+        textDecoration: 'none',
+    },
+    rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+});
+
+function updateDecorations(editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor) {
+    if (!editor) {
+        return;
+    }
+
+    const decorations: vscode.DecorationOptions[] = [];
+    for (let i = 0; i < editor.document.lineCount; i++) {
+        const line = editor.document.lineAt(i);
+        if (line.isEmptyOrWhitespace || line.text.startsWith('#')) {
+            continue;
+        }
+
+        const count = syllable(line.text);
+        decorations.push({
+            range: new vscode.Range(i, 1024, i, 1024),
+            renderOptions: {
+                after: {
+                    contentText: `(${count})`,
+                    color: new vscode.ThemeColor('editorCodeLens.foreground'),
+                },
+            },
+        });
+    }
+
+    editor.setDecorations(decorationType, decorations);
+}
+
+
 export function activate(context: vscode.ExtensionContext) {
+    console.log('Lyrical is now active!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "lyrical" is now active!');
+    let timeout: NodeJS.Timeout;
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
+    const triggerUpdateDecorations = (editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor) => {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => updateDecorations(editor), 500);
+    };
+
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (editor) {
+            triggerUpdateDecorations(editor);
+        }
+    }, null, context.subscriptions);
+
+    vscode.workspace.onDidChangeTextDocument(event => {
+        if (vscode.window.activeTextEditor && event.document === vscode.window.activeTextEditor.document) {
+            triggerUpdateDecorations(vscode.window.activeTextEditor);
+        }
+    }, null, context.subscriptions);
+
+    if (vscode.window.activeTextEditor) {
+        triggerUpdateDecorations(vscode.window.activeTextEditor);
+    }
+
 	const disposable = vscode.commands.registerCommand('lyrical.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
 		vscode.window.showInformationMessage('Hello World from Lyrical!');
 	});
 
 	context.subscriptions.push(disposable);
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+    if (decorationType) {
+        decorationType.dispose();
+    }
+}
