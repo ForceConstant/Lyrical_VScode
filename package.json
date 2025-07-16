@@ -13,7 +13,14 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "lyrical.showRhymes",
+        "title": "Lyrical: Show Rhymes"
+      }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -35,6 +42,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "rhymes": "^2.0.0",
     "syllable": "^5.0.1"
   }
 }
