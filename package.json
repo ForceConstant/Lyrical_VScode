@@ -2,7 +2,12 @@
   "name": "lyrical",
   "displayName": "Lyrical",
   "description": "VScode extension to calculate syllables, find rhymes and more",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ForceConstant/Lyrical_VScode.git"
+  },
   "version": "0.0.1",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.102.0"
   },
