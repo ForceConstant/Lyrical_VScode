@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
-const syllable = require('syllable');
-const rhymes = require('rhymes');
+import rhymes from 'rhymes';
+
+let lyricalOutputChannel: vscode.OutputChannel;
+lyricalOutputChannel = vscode.window.createOutputChannel('Lyrical');
 
 let decorationType = vscode.window.createTextEditorDecorationType({
     after: {
@@ -10,10 +12,37 @@ let decorationType = vscode.window.createTextEditorDecorationType({
     rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
 });
 
-function updateDecorations(editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor) {
-    if (!editor) {
+let syllableCountEnabled = false;
+
+let syllable: (text: string) => number;
+
+async function updateDecorations(editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor) {
+
+
+    if (!syllable) {
+        try {
+            syllable = (await import('syllable')).syllable;
+        } catch (err) {
+            console.error('Failed to load syllable module', err);
+            vscode.window.showErrorMessage('Lyrical: The "syllable" package could not be loaded. Syllable counting will be disabled.');
+            syllableCountEnabled = false;
+            return;
+        }
+    }
+
+    if (!editor || !syllableCountEnabled) {
+        lyricalOutputChannel.appendLine('Lyrical: Syllable count decorations stopped - editor or feature disabled.');
+        editor?.setDecorations(decorationType, []);
         return;
     }
+
+    // Only show syllables for markdown files
+    if (editor.document.languageId !== 'markdown' && !editor.document.fileName.endsWith('.lyrical.md')) {
+        lyricalOutputChannel.appendLine(`Lyrical: File not applicable for syllable count: ${editor.document.fileName}`);
+        editor.setDecorations(decorationType, []);
+        return;
+    }
+    lyricalOutputChannel.appendLine(`Lyrical: File recognized for syllable count: ${editor.document.fileName}`);
 
     const decorations: vscode.DecorationOptions[] = [];
     for (let i = 0; i < editor.document.lineCount; i++) {
@@ -23,6 +52,7 @@ function updateDecorations(editor: vscode.TextEditor | undefined = vscode.window
         }
 
         const count = syllable(line.text);
+        lyricalOutputChannel.appendLine(`Lyrical: Line ${i + 1} syllable count: ${count}`);
         decorations.push({
             range: new vscode.Range(i, 1024, i, 1024),
             renderOptions: {
@@ -34,12 +64,15 @@ function updateDecorations(editor: vscode.TextEditor | undefined = vscode.window
         });
     }
 
+    lyricalOutputChannel.appendLine('Lyrical: Applying syllable count decorations.');
     editor.setDecorations(decorationType, decorations);
 }
 
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Lyrical is now active!');
+
+    lyricalOutputChannel.appendLine('Lyrical is now active!');
+    lyricalOutputChannel.appendLine('Lyrical is now active! 5');
 
     let timeout: NodeJS.Timeout;
 
@@ -66,31 +99,25 @@ export function activate(context: vscode.ExtensionContext) {
         triggerUpdateDecorations(vscode.window.activeTextEditor);
     }
 
-	const disposable = vscode.commands.registerCommand('lyrical.helloWorld', () => {
-		vscode.window.showInformationMessage('Hello World from Lyrical!');
-	});
+    const findRhymes = vscode.commands.registerCommand('lyrical.showRhymes', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const selection = editor.selection;
+            const text = editor.document.getText(selection);
+            if (text) {
+                const rhymeResults = rhymes(text);
+                const panel = vscode.window.createWebviewPanel(
+                    'rhymeResults',
+                    `Rhymes for ${text}`,
+                    vscode.ViewColumn.Two,
+                    {}
+                );
 
-	context.subscriptions.push(disposable);
+                const oneSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '1');
+                const twoSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '2');
+                const threeSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '3');
 
-	const findRhymes = vscode.commands.registerCommand('lyrical.showRhymes', () => {
-	       const editor = vscode.window.activeTextEditor;
-	       if (editor) {
-	           const selection = editor.selection;
-	           const text = editor.document.getText(selection);
-	           if (text) {
-	               const rhymeResults = rhymes(text);
-	               const panel = vscode.window.createWebviewPanel(
-	                   'rhymeResults',
-	                   `Rhymes for ${text}`,
-	                   vscode.ViewColumn.Two,
-	                   {}
-	               );
-
-	               const oneSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '1');
-	               const twoSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '2');
-	               const threeSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '3');
-
-	               panel.webview.html = `
+                panel.webview.html = `
 	                   <h1>Rhymes for "${text}"</h1>
 	                   <h2>1 Syllable</h2>
 	                   <ul>
@@ -105,15 +132,33 @@ export function activate(context: vscode.ExtensionContext) {
 	                       ${threeSyllableRhymes.map((r: any) => `<li>${r.word}</li>`).join('')}
 	                   </ul>
 	               `;
-	           }
-	       }
-	   });
+            }
+        }
+    });
 
-	   context.subscriptions.push(findRhymes);
+    context.subscriptions.push(findRhymes);
+
+    const toggleSyllableCount = vscode.commands.registerCommand('lyrical.toggleSyllableCount', () => {
+        lyricalOutputChannel.appendLine('Lyrical: Toggle Syllable Count command executed.');
+        syllableCountEnabled = !syllableCountEnabled;
+
+        const status = syllableCountEnabled ? 'enabled' : 'disabled';
+        vscode.window.showInformationMessage(`Syllable count ${status}`);
+
+        // Update all visible editors
+        vscode.window.visibleTextEditors.forEach(editor => {
+            updateDecorations(editor);
+        });
+    });
+
+    context.subscriptions.push(toggleSyllableCount);
 }
 
 export function deactivate() {
     if (decorationType) {
         decorationType.dispose();
+    }
+    if (lyricalOutputChannel) {
+        lyricalOutputChannel.dispose();
     }
 }

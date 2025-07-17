@@ -16,7 +16,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -24,8 +24,21 @@
       {
         "command": "lyrical.showRhymes",
         "title": "Lyrical: Show Rhymes"
+      },
+      {
+        "command": "lyrical.toggleSyllableCount",
+        "title": "Lyrical: Toggle Syllable Count"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == markdown",
+          "command": "lyrical.toggleSyllableCount",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -34,7 +47,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
-    "package": "vsce package"
+    "package": "npm run compile && vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

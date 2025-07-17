@@ -38,6 +38,8 @@ No known issues at this time. If you encounter any problems, please report them 
 
 ### 0.0.1
 
+weathered
+
 Initial release of Lyrical, introducing:
 *   Real-time syllable counting with line decorations.
 *   On-demand rhyme finding for selected words.
