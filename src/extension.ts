@@ -31,7 +31,7 @@ async function updateDecorations(editor: vscode.TextEditor | undefined = vscode.
     }
 
     if (!editor || !syllableCountEnabled) {
-        lyricalOutputChannel.appendLine('Lyrical: Syllable count decorations stopped - editor or feature disabled.');
+        // lyricalOutputChannel.appendLine('Lyrical: Syllable count decorations stopped - editor or feature disabled.');
         editor?.setDecorations(decorationType, []);
         return;
     }
@@ -72,7 +72,6 @@ async function updateDecorations(editor: vscode.TextEditor | undefined = vscode.
 export function activate(context: vscode.ExtensionContext) {
 
     lyricalOutputChannel.appendLine('Lyrical is now active!');
-    lyricalOutputChannel.appendLine('Lyrical is now active! 5');
 
     let timeout: NodeJS.Timeout;
 
@@ -105,33 +104,10 @@ export function activate(context: vscode.ExtensionContext) {
             const selection = editor.selection;
             const text = editor.document.getText(selection);
             if (text) {
-                const rhymeResults = rhymes(text);
-                const panel = vscode.window.createWebviewPanel(
-                    'rhymeResults',
-                    `Rhymes for ${text}`,
-                    vscode.ViewColumn.Two,
-                    {}
-                );
-
-                const oneSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '1');
-                const twoSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '2');
-                const threeSyllableRhymes = rhymeResults.filter((r: any) => r.syllables === '3');
-
-                panel.webview.html = `
-	                   <h1>Rhymes for "${text}"</h1>
-	                   <h2>1 Syllable</h2>
-	                   <ul>
-	                       ${oneSyllableRhymes.map((r: any) => `<li>${r.word}</li>`).join('')}
-	                   </ul>
-	                   <h2>2 Syllables</h2>
-	                   <ul>
-	                       ${twoSyllableRhymes.map((r: any) => `<li>${r.word}</li>`).join('')}
-	                   </ul>
-	                   <h2>3 Syllables</h2>
-	                   <ul>
-	                       ${threeSyllableRhymes.map((r: any) => `<li>${r.word}</li>`).join('')}
-	                   </ul>
-	               `;
+                const query = encodeURIComponent(text);
+                // const url = `https://www.rhymezone.com/r/rhyme.cgi?Word=${query}&org1=syl&org2=l&org3=y&typeofrhyme=perfect`;
+                const url = `https://www.rhymewave.com/index.php?s=${query}`;
+                vscode.commands.executeCommand('simpleBrowser.show', vscode.Uri.parse(url), { viewColumn: vscode.ViewColumn.Beside });
             }
         }
     });
@@ -139,7 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(findRhymes);
 
     const toggleSyllableCount = vscode.commands.registerCommand('lyrical.toggleSyllableCount', () => {
-        lyricalOutputChannel.appendLine('Lyrical: Toggle Syllable Count command executed.');
+        // lyricalOutputChannel.appendLine('Lyrical: Toggle Syllable Count command executed.');
         syllableCountEnabled = !syllableCountEnabled;
 
         const status = syllableCountEnabled ? 'enabled' : 'disabled';

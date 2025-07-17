@@ -23,7 +23,7 @@
     "commands": [
       {
         "command": "lyrical.showRhymes",
-        "title": "Lyrical: Show Rhymes"
+        "title": "Lyrical: Find Rhymes at RhymeWave"
       },
       {
         "command": "lyrical.toggleSyllableCount",
